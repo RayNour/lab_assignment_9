@@ -1,24 +1,37 @@
 #include <stdio.h>
+#include <stdlib.h>
 
 // RecordType
 struct RecordType
 {
-	int		id;
-	char	name;
-	int		order; 
+    int id;
+    char name;
+    int order;
+};
+
+struct Node
+{
+    struct RecordType data;
+    struct Node *next;
 };
 
 // Fill out this structure
 struct HashType
 {
-
+    struct Node **array;
+    int size;
 };
 
 // Compute the hash function
-int hash(int x)
+int hash(struct RecordType data, int size)
 {
-
+    unsigned int hashVal = 31; 
+    hashVal = hashVal * 17 + data.id;
+    hashVal = hashVal * 17 + data.name;
+    hashVal = hashVal * 17 + data.order;
+    return hashVal % size;
 }
+
 
 // parses input file to an integer array
 int parseData(char* inputFileName, struct RecordType** ppData)
@@ -73,22 +86,90 @@ void printRecords(struct RecordType pData[], int dataSz)
 // skip the indices which are free
 // the output will be in the format:
 // index x -> id, name, order -> id, name, order ....
-void displayRecordsInHash(struct HashType *pHashArray, int hashSz)
+// display records in the hash structure
+void displayRecordsInHash(struct HashType *pHashArray)
 {
-	int i;
+    int i;
+    for (i = 0; i < pHashArray->size; ++i)
+    {
+        if (pHashArray->array[i] == NULL)
+            continue;
 
-	for (i=0;i<hashSz;++i)
-	{
-		// if index is occupied with any records, print all
-	}
+        printf("Index %d:", i);
+        struct Node *current = pHashArray->array[i];
+        while (current != NULL)
+        {
+            printf(" -> %d, %c, %d", current->data.id, current->data.name, current->data.order);
+            current = current->next;
+        }
+        printf("\n");
+    }
+}
+
+void insert(struct HashType *hashTable, struct RecordType data)
+{
+    int index = hash(data, hashTable->size);
+
+    // Check if there's an existing entry at the index
+    struct Node *current = hashTable->array[index];
+    while (current != NULL)
+    {
+        if (current->data.id == data.id)
+        {
+            // Update the existing entry and return
+            current->data = data;
+            return;
+        }
+        current = current->next;
+    }
+
+    struct Node *newNode = (struct Node *)malloc(sizeof(struct Node));
+
+    newNode->data = data;
+    newNode->next = hashTable->array[index];
+    hashTable->array[index] = newNode;
 }
 
 int main(void)
 {
-	struct RecordType *pRecords;
-	int recordSz = 0;
+    struct RecordType *pRecords;
+    int recordSz = 0;
 
-	recordSz = parseData("input.txt", &pRecords);
-	printRecords(pRecords, recordSz);
-	// Your hash implementation
+    recordSz = parseData("input.txt", &pRecords);
+    printRecords(pRecords, recordSz);
+
+    // Your hash implementation
+    int hashSize = 15; 
+    struct HashType hashTable;
+    hashTable.size = hashSize;
+    hashTable.array = (struct Node **)malloc(hashSize * sizeof(struct Node *));
+
+    // Initialize the hash table with NULL values
+    for (int i = 0; i < hashSize; i++)
+    {
+        hashTable.array[i] = NULL;
+    }
+
+    // Inserting records into the hash table
+    for (int i = 0; i < recordSz; i++)
+    {
+        insert(&hashTable, pRecords[i]);
+    }
+
+    displayRecordsInHash(&hashTable);
+
+    // Freeing allocated memory for the hash table
+    for (int i = 0; i < hashSize; i++)
+    {
+        struct Node *current = hashTable.array[i];
+        while (current != NULL)
+        {
+            struct Node *temp = current;
+            current = current->next;
+            free(temp);
+        }
+    }
+    free(hashTable.array);
+
+    return 0;
 }
